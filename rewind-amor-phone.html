@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MESS//IA — Interface Interceptée</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;500;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #ff1a2e;
+    --red-dim: #8b0010;
+    --red-glow: rgba(255,26,46,0.25);
+    --cyan: #00f5ff;
+    --cyan-dim: #007a82;
+    --cyan-glow: rgba(0,245,255,0.2);
+    --bg: #030508;
+    --bg2: #07090f;
+    --bg3: #0c0f18;
+    --grid: rgba(0,245,255,0.04);
+    --amber: #ffaa00;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Share Tech Mono', monospace;
+    overflow: hidden;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.15) 2px,
+      rgba(0,0,0,0.15) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+    animation: scanroll 8s linear infinite;
+  }
+
+  @keyframes scanroll {
+    0% { background-position: 0 0; }
+    100% { background-position: 0 100px; }
+  }
+
+  .phone-wrapper {
+    position: relative;
+    width: 360px;
+    height: 720px;
+  }
+
+  /* Holographic glow around phone */
+  .phone-wrapper::before {
+    content: '';
+    position: absolute;
+    inset: -20px;
+    border-radius: 50px;
+    background: radial-gradient(ellipse, var(--red-glow) 0%, transparent 70%);
+    animation: holo-pulse 3s ease-in-out infinite alternate;
+    z-index: -1;
+  }
+
+  @keyframes holo-pulse {
+    0% { opacity: 0.5; transform: scale(0.95); }
+    100% { opacity: 1; transform: scale(1.05); }
+  }
+
+  .phone {
+    width: 100%;
+    height: 100%;
+    background: var(--bg);
+    border-radius: 32px;
+    border: 1px solid var(--red-dim);
+    box-shadow:
+      0 0 0 1px rgba(255,26,46,0.1),
+      0 0 30px var(--red-glow),
+      0 0 80px rgba(255,26,46,0.1),
+      inset 0 0 40px rgba(0,0,0,0.8);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  /* Grid pattern background */
+  .phone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 30px 30px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* STATUS BAR */
+  .status-bar {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px 6px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    color: var(--red);
+    border-bottom: 1px solid rgba(255,26,46,0.15);
+    background: rgba(3,5,8,0.9);
+  }
+
+  .status-time {
+    font-size: 11px;
+    letter-spacing: 3px;
+    font-weight: 700;
+  }
+
+  .status-icons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .status-icon {
+    width: 16px;
+    height: 10px;
+    position: relative;
+  }
+
+  .signal-bars {
+    display: flex;
+    gap: 2px;
+    align-items: flex-end;
+  }
+  .signal-bars span {
+    background: var(--red);
+    width: 3px;
+    display: block;
+    border-radius: 1px;
+    box-shadow: 0 0 4px var(--red);
+  }
+  .signal-bars span:nth-child(1) { height: 4px; }
+  .signal-bars span:nth-child(2) { height: 7px; }
+  .signal-bars span:nth-child(3) { height: 10px; opacity: 0.4; }
+  .signal-bars span:nth-child(4) { height: 13px; opacity: 0.2; }
+
+  .enc-badge {
+    font-size: 7px;
+    letter-spacing: 1px;
+    color: var(--cyan);
+    border: 1px solid var(--cyan-dim);
+    padding: 1px 4px;
+    border-radius: 2px;
+    animation: blink-enc 2s ease-in-out infinite;
+    text-shadow: 0 0 6px var(--cyan);
+  }
+
+  @keyframes blink-enc {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* HEADER */
+  .header {
+    position: relative;
+    z-index: 10;
+    background: linear-gradient(180deg, rgba(8,2,2,0.98) 0%, rgba(5,2,8,0.9) 100%);
+    border-bottom: 1px solid var(--red-dim);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 4px 20px rgba(255,26,46,0.15);
+  }
+
+  .back-btn {
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--red-dim);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--red);
+    font-size: 14px;
+    transition: all 0.2s;
+    background: rgba(255,26,46,0.05);
+  }
+
+  .contact-info {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--red);
+    box-shadow: 0 0 10px var(--red-glow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 900;
+    color: var(--red);
+    background: rgba(255,26,46,0.08);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .avatar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,26,46,0.2) 0%, transparent 60%);
+  }
+
+  .contact-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px rgba(255,255,255,0.3);
+  }
+
+  .contact-sub {
+    font-size: 9px;
+    color: var(--red-dim);
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
+
+  .enc-status {
+    font-size: 8px;
+    color: var(--cyan);
+    text-align: right;
+    letter-spacing: 1px;
+  }
+
+  .enc-dot {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 6px var(--cyan);
+    margin-right: 4px;
+    animation: pulse-dot 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  /* WARNING BANNER */
+  .warning-banner {
+    position: relative;
+    z-index: 10;
+    background: rgba(255, 170, 0, 0.08);
+    border-bottom: 1px solid rgba(255,170,0,0.3);
+    padding: 5px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 8px;
+    color: var(--amber);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .warning-banner::before {
+    content: '⚠';
+    font-size: 10px;
+  }
+
+  /* MESSAGES AREA */
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: relative;
+    z-index: 5;
+  }
+
+  .messages::-webkit-scrollbar {
+    width: 3px;
+  }
+  .messages::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .messages::-webkit-scrollbar-thumb {
+    background: var(--red-dim);
+    border-radius: 2px;
+  }
+
+  /* DATE SEPARATOR */
+  .date-sep {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: rgba(255,255,255,0.2);
+    font-size: 8px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .date-sep::before, .date-sep::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255,255,255,0.08);
+  }
+
+  /* MESSAGE BUBBLES */
+  .msg {
+    display: flex;
+    flex-direction: column;
+    max-width: 82%;
+    animation: msg-appear 0.4s ease forwards;
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  @keyframes msg-appear {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .msg.dexter {
+    align-self: flex-start;
+    align-items: flex-start;
+  }
+
+  .msg.amor {
+    align-self: flex-end;
+    align-items: flex-end;
+  }
+
+  .msg-sender {
+    font-size: 8px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    font-family: 'Orbitron', sans-serif;
+  }
+
+  .msg.dexter .msg-sender {
+    color: var(--red);
+    text-shadow: 0 0 8px var(--red);
+  }
+
+  .msg.amor .msg-sender {
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan);
+  }
+
+  .bubble {
+    padding: 10px 14px;
+    border-radius: 4px;
+    font-size: 11px;
+    line-height: 1.6;
+    letter-spacing: 0.5px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .bubble::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.03;
+    background: repeating-linear-gradient(
+      45deg,
+      rgba(255,255,255,0.1) 0px,
+      rgba(255,255,255,0.1) 1px,
+      transparent 1px,
+      transparent 6px
+    );
+  }
+
+  .msg.dexter .bubble {
+    background: rgba(15, 3, 5, 0.95);
+    border: 1px solid var(--red-dim);
+    border-left: 2px solid var(--red);
+    color: #ffd0d5;
+    box-shadow: 0 0 15px rgba(255,26,46,0.12), inset 0 0 20px rgba(255,26,46,0.05);
+    border-top-left-radius: 0;
+  }
+
+  .msg.amor .bubble {
+    background: rgba(0, 10, 15, 0.95);
+    border: 1px solid var(--cyan-dim);
+    border-right: 2px solid var(--cyan);
+    color: #c0f4ff;
+    box-shadow: 0 0 15px rgba(0,245,255,0.1), inset 0 0 20px rgba(0,245,255,0.03);
+    border-top-right-radius: 0;
+  }
+
+  /* Glitch effect on some bubbles */
+  .bubble.glitch {
+    animation: glitch-text 6s ease-in-out infinite;
+  }
+
+  @keyframes glitch-text {
+    0%, 90%, 100% { clip-path: none; transform: none; }
+    92% { clip-path: inset(10% 0 80% 0); transform: translate(-2px, 0); }
+    94% { clip-path: inset(60% 0 20% 0); transform: translate(2px, 0); }
+    96% { clip-path: none; transform: none; }
+  }
+
+  .msg-time {
+    font-size: 8px;
+    color: rgba(255,255,255,0.2);
+    margin-top: 4px;
+    letter-spacing: 1px;
+  }
+
+  /* Encoded/redacted text */
+  .enc {
+    font-family: 'Share Tech Mono', monospace;
+    background: rgba(255,170,0,0.1);
+    border: 1px solid rgba(255,170,0,0.3);
+    color: var(--amber);
+    padding: 0 4px;
+    border-radius: 2px;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-shadow: 0 0 6px var(--amber);
+  }
+
+  .redacted {
+    background: rgba(255,26,46,0.6);
+    color: rgba(255,26,46,0.6);
+    border-radius: 2px;
+    user-select: none;
+    letter-spacing: 0;
+  }
+
+  /* Coord tag */
+  .coord {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 9px;
+    color: var(--cyan);
+    border: 1px solid var(--cyan-dim);
+    padding: 1px 5px;
+    border-radius: 2px;
+    letter-spacing: 1px;
+    background: rgba(0,245,255,0.05);
+  }
+
+  /* System message */
+  .sys-msg {
+    align-self: center;
+    font-size: 8px;
+    color: rgba(255,26,46,0.5);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border: 1px solid rgba(255,26,46,0.15);
+    padding: 4px 12px;
+    border-radius: 2px;
+    background: rgba(255,26,46,0.03);
+    position: relative;
+  }
+
+  .sys-msg::before {
+    content: '//';
+    margin-right: 6px;
+    opacity: 0.5;
+  }
+
+  /* Typing indicator */
+  .typing {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 14px;
+    background: rgba(0,10,15,0.95);
+    border: 1px solid var(--cyan-dim);
+    border-left: 2px solid var(--cyan);
+    border-radius: 4px;
+    border-top-left-radius: 0;
+    width: fit-content;
+    align-self: flex-start;
+  }
+
+  .typing-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 4px var(--cyan);
+  }
+  .typing-dot:nth-child(1) { animation: typing-pulse 1.2s 0s ease-in-out infinite; }
+  .typing-dot:nth-child(2) { animation: typing-pulse 1.2s 0.3s ease-in-out infinite; }
+  .typing-dot:nth-child(3) { animation: typing-pulse 1.2s 0.6s ease-in-out infinite; }
+
+  @keyframes typing-pulse {
+    0%, 100% { opacity: 0.2; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.2); }
+  }
+
+  /* INPUT BAR */
+  .input-bar {
+    position: relative;
+    z-index: 10;
+    background: rgba(3,5,8,0.98);
+    border-top: 1px solid var(--red-dim);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 -4px 20px rgba(255,26,46,0.1);
+  }
+
+  .input-field {
+    flex: 1;
+    background: rgba(255,26,46,0.04);
+    border: 1px solid rgba(255,26,46,0.2);
+    border-radius: 4px;
+    padding: 9px 12px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: rgba(255,200,200,0.5);
+    letter-spacing: 1px;
+    outline: none;
+    cursor: default;
+  }
+
+  .input-field::placeholder {
+    color: rgba(255,26,46,0.2);
+    letter-spacing: 2px;
+    font-size: 9px;
+  }
+
+  .enc-btn {
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--red-dim);
+    border-radius: 4px;
+    background: rgba(255,26,46,0.08);
+    color: var(--red);
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(255,26,46,0.15);
+  }
+
+  /* DECODE OVERLAY */
+  .decode-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s;
+    border-radius: 32px;
+  }
+
+  .decode-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .decode-hex {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 8px;
+    color: var(--red);
+    opacity: 0.4;
+    letter-spacing: 3px;
+    text-align: center;
+    padding: 0 30px;
+    line-height: 1.8;
+    animation: hex-scroll 4s linear infinite;
+  }
+
+  @keyframes hex-scroll {
+    0% { opacity: 0.3; }
+    50% { opacity: 0.6; }
+    100% { opacity: 0.3; }
+  }
+
+  .decode-status {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    color: var(--cyan);
+    letter-spacing: 4px;
+    text-shadow: 0 0 12px var(--cyan);
+    animation: blink-enc 0.8s ease-in-out infinite;
+  }
+
+  .decode-bar-wrap {
+    width: 200px;
+    height: 2px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+
+  .decode-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--red), var(--cyan));
+    width: 0%;
+    border-radius: 1px;
+    box-shadow: 0 0 8px var(--cyan);
+    animation: decode-fill 3s ease forwards;
+  }
+
+  @keyframes decode-fill {
+    0% { width: 0%; }
+    100% { width: 100%; }
+  }
+
+  /* Message animation delays */
+  .msg:nth-child(1) { animation-delay: 0.1s; }
+  .msg:nth-child(2) { animation-delay: 0.3s; }
+  .msg:nth-child(3) { animation-delay: 0.6s; }
+  .msg:nth-child(4) { animation-delay: 0.9s; }
+  .msg:nth-child(5) { animation-delay: 1.2s; }
+  .msg:nth-child(6) { animation-delay: 1.5s; }
+  .msg:nth-child(7) { animation-delay: 1.8s; }
+  .msg:nth-child(8) { animation-delay: 2.1s; }
+  .msg:nth-child(9) { animation-delay: 2.4s; }
+  .sys-msg { animation: msg-appear 0.4s 0.8s ease forwards; opacity: 0; }
+</style>
+</head>
+<body>
+
+<div class="phone-wrapper">
+  <div class="phone">
+
+    <!-- STATUS BAR -->
+    <div class="status-bar">
+      
+      <div class="enc-badge">CHIFFRÉ</div>
+      <div class="signal-bars">
+        <span></span><span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <!-- HEADER -->
+    <div class="header">
+      <div class="back-btn">◂</div>
+      <div class="contact-info">
+        <div class="avatar">DX</div>
+        <div>
+          <div class="contact-name">DEX</div>
+          <div class="contact-sub">CERBERUS // DIRECTEUR</div>
+        </div>
+      </div>
+      <div>
+        <div class="enc-status"><span class="enc-dot"></span>CRYPTÉ E2E</div>
+        <div class="enc-status" style="margin-top:2px; color: rgba(255,26,46,0.5);">CANAL SÉCURISÉ-7</div>
+      </div>
+    </div>
+
+    <!-- WARNING -->
+    <div class="warning-banner">
+      COMMUNICATION INTERCEPTÉE — FRAGMENT DÉCHIFFRÉ PARTIEL
+    </div>
+
+    <!-- MESSAGES -->
+    <!-- NOTE: AMOR = left (incoming, cyan) = chef des agents / DEX = right (outgoing, rouge) = contact Cerberus -->
+    <div class="messages" id="messages">
+
+      <div class="date-sep">2035.02.18 — SESSION RECONSTRUITE</div>
+
+      <!-- Amor ouvre - furieuse -->
+      <div class="msg amor">
+        <div class="msg-sender">AMOR</div>
+        <div class="bubble glitch">
+          C'était toi. Dis-moi que c'était pas toi. Les chiens qui ont tourné autour du <span class="enc">NŒUD-09</span> cette nuit, c'est Cerberus ?
+        </div>
+        <div class="msg-time">03:11:22</div>
+      </div>
+
+      <!-- Dex — silence, puis -->
+      <div class="msg dexter">
+        <div class="msg-sender">DEX</div>
+        <div class="bubble">
+          Tel Aviv, oui. C'était moi. Mais écoute-moi avant de faire quoi que ce soit.
+        </div>
+        <div class="msg-time">03:12:08</div>
+      </div>
+
+      <!-- Amor explose -->
+      <div class="msg amor">
+        <div class="msg-sender">AMOR</div>
+        <div class="bubble">
+          Non. <strong>Non.</strong> On avait un accord. Mes agents étaient à <span class="coord">📍 SECTEUR-SUD</span> cette nuit. Tu aurais pu les brûler. Tu peux plus me garantir RIEN, Dex.
+          <br><br>
+          Comment je suis censée continuer <span class="enc">PROJET-MESS</span> si tu envoies tes gens sans me prévenir ?
+        </div>
+        <div class="msg-time">03:13:41</div>
+      </div>
+
+      <div class="sys-msg">LACUNE DE TRANSMISSION — 02min 17sec</div>
+
+      <!-- Dex se justifie -->
+      <div class="msg dexter">
+        <div class="msg-sender">DEX</div>
+        <div class="bubble">
+          C'est moi qui ai ordonné Tel Aviv, je te le confirme. Mais cette nuit c'est différent. Quelqu'un utilise nos protocoles sans autorisation, une fuite interne ou quelqu'un qui connaît nos méthodes.
+        </div>
+        <div class="msg-time">03:16:03</div>
+      </div>
+
+      <div class="msg dexter">
+        <div class="msg-sender">DEX</div>
+        <div class="bubble glitch">
+          Je vais régler ça. Donne-moi <span class="enc">H-48</span>. Personne d'autre ne s'approche du projet.
+        </div>
+        <div class="msg-time">03:16:44</div>
+      </div>
+
+      <!-- Amor — moins convaincue -->
+      <div class="msg amor">
+        <div class="msg-sender">AMOR</div>
+        <div class="bubble">
+          Tu dis "quelqu'un qui connaît nos méthodes". Tu parles de <span class="redacted">██████</span> ? Parce que si c'est lui, il sait tout sur <span class="enc">SEUIL-Ω</span>. Il a été là dès le début.
+        </div>
+        <div class="msg-time">03:18:02</div>
+      </div>
+
+      <!-- Dex — révèle un peu trop -->
+      <div class="msg dexter">
+        <div class="msg-sender">DEX</div>
+        <div class="bubble">
+          Il ne parlera pas. Il sait ce qu'il risque. Et ses données sont encore dans le réseau, on le tient par là.
+          <br><br>
+          Mais si tes agents remontent jusqu'à lui avant nous, c'est un problème pour les <em>deux</em>.
+        </div>
+        <div class="msg-time">03:19:55</div>
+      </div>
+
+      <!-- Amor — froide, calcule -->
+      <div class="msg amor">
+        <div class="msg-sender">AMOR</div>
+        <div class="bubble">
+          Mes agents ne savent rien. Encore. Mais si la fusion dérape à cause d'une variable qu'on maîtrise pas,
+          <br><br>
+          Le sujet <span class="enc">J-JOHNSON</span> pose déjà des questions. Son frère est un levier, mais c'est fragile.
+        </div>
+        <div class="msg-time">03:21:12</div>
+      </div>
+
+      <!-- Dex — rassure, mais froid -->
+      <div class="msg dexter">
+        <div class="msg-sender">DEX</div>
+        <div class="bubble">
+          On a construit ce projet ensemble, Amor. Chaque fragment, chaque puce. La ressource qu'on crée ensemble — personne d'autre ne peut le faire.
+          <br><br>
+          Je règle le problème. Tu tiens tes agents. <span class="redacted">███████████████████████</span>
+        </div>
+        <div class="msg-time">03:22:30</div>
+      </div>
+
+      <!-- Amor — dernier mot ambigu -->
+      <div class="msg amor">
+        <div class="msg-sender">AMOR</div>
+        <div class="bubble glitch">
+          Une dernière chose. Ce canal s'efface dans <span class="enc">08:00</span>.
+          <br>
+          Si quelqu'un lit ça — dis-toi qu'il est déjà trop tard pour comprendre ce qu'on a construit.
+        </div>
+        <div class="msg-time">03:23:47</div>
+      </div>
+
+      <div class="date-sep">2035.02.18 — 04:01 — FRAGMENT SUIVANT</div>
+
+      <div class="msg dexter">
+        <div class="msg-sender">DEX</div>
+        <div class="bubble">
+          Tsukino est mort cette nuit. Officiel. Tu sais comme moi que "mort" ne veut plus rien dire depuis que <span class="enc">SOVEREIGN</span> est impliqué.
+        </div>
+        <div class="msg-time">04:01:12</div>
+      </div>
+
+      <div class="msg amor">
+        <div class="msg-sender">AMOR</div>
+        <div class="bubble">
+          Roy Tsukino était déclaré mort il y a <span class="enc">4 MOIS</span>. Tout le monde le sait. Ce que personne ne sait, c'est ce que Sovereign lui a fait pour qu'il continue à marcher, parler, respirer.
+        </div>
+        <div class="msg-time">04:02:45</div>
+      </div>
+
+      <div class="msg dexter">
+        <div class="msg-sender">DEX</div>
+        <div class="bubble glitch">
+          Il était un élément crucial. Les données qu'il portait, pas dans une puce, <em>dans ses cellules</em>, on ne peut pas les récupérer si le corps est détruit. Sovereign savait ça.
+        </div>
+        <div class="msg-time">04:03:58</div>
+      </div>
+
+      <div class="msg amor">
+        <div class="msg-sender">AMOR</div>
+        <div class="bubble">
+          Sovereign a utilisé une variante du <span class="enc">PROTOCOLE-MESS</span> sur lui. Maintien neurologique post-mortem. Roy ne vivait plus, il <em>fonctionnait</em>. Comme une archive ambulante qu'on pouvait interroger.
+          <br><br>
+          La différence entre lui et nos fragments, c'est qu'il avait encore un visage.
+        </div>
+        <div class="msg-time">04:05:22</div>
+      </div>
+
+      <div class="msg dexter">
+        <div class="msg-sender">DEX</div>
+        <div class="bubble">
+          Si tes agents ont été en contact avec lui sans savoir ce qu'il était… ils ont peut-être absorbé des données sans le réaliser. Une contamination passive via <span class="enc">SEUIL-Ω</span>.
+        </div>
+        <div class="msg-time">04:06:44</div>
+      </div>
+
+      <div class="msg amor">
+        <div class="msg-sender">AMOR</div>
+        <div class="bubble glitch">
+          Je sais.
+          <br><br>
+          C'est pour ça que je ne leur ai rien dit sur Roy. <span class="redacted">████████████████████████████████</span>
+          <br><br>
+          Certaines vérités les rendraient inutilisables.
+        </div>
+        <div class="msg-time">04:08:03</div>
+      </div>
+
+      <!-- Typing indicator -->
+      <div class="typing" id="typing" style="opacity:0; animation: msg-appear 0.4s 3.8s ease forwards;">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>
+
+    </div>
+
+    <!-- INPUT BAR -->
+    <div class="input-bar">
+      <div class="input-field" placeholder="ACCÈS RESTREINT...">ACCÈS RESTREINT</div>
+      <div class="enc-btn" onclick="triggerDecode()">🔐</div>
+    </div>
+
+    <!-- DECODE OVERLAY -->
+    <div class="decode-overlay" id="decodeOverlay">
+      <div class="decode-hex" id="hexDump">
+        4D455353 2F2F4941 20555449 4C495341 54455552<br>
+        41434345 53532044 454E4945 20504F55 52204341<br>
+        4E414C20 37202D20 46524147 4D454E54 2053454E<br>
+        53204449 52454354 494F4E20 50524F54 4F434F4C<br>
+        45204D45 53532D4F 4D454741 20494E49 54494154<br>
+        45442E20 41544445 4E445245 5A204C41 20464F4E<br>
+        43544956 4F4E2053 45435445 55522053 55442E2E
+      </div>
+      <div class="decode-status">DÉCHIFFREMENT EN COURS...</div>
+      <div class="decode-bar-wrap">
+        <div class="decode-bar" id="decodeBar"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // Auto-scroll to bottom
+  const messagesDiv = document.getElementById('messages');
+  setTimeout(() => {
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }, 3000);
+
+  // Live time update
+  function updateTime() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2,'0');
+    const m = String(now.getMinutes()).padStart(2,'0');
+    document.querySelector('.status-time').textContent = h + ':' + m;
+  }
+  updateTime();
+  setInterval(updateTime, 60000);
+
+  // Decode overlay
+  function triggerDecode() {
+    const overlay = document.getElementById('decodeOverlay');
+    const bar = document.getElementById('decodeBar');
+    overlay.classList.add('active');
+    bar.style.animation = 'none';
+    bar.offsetHeight; // reflow
+    bar.style.animation = 'decode-fill 3s ease forwards';
+
+    setTimeout(() => {
+      overlay.classList.remove('active');
+    }, 3500);
+  }
+
+  // Glitch random flicker on the phone border
+  setInterval(() => {
+    const phone = document.querySelector('.phone');
+    phone.style.boxShadow = `0 0 0 1px rgba(255,26,46,0.2), 0 0 ${20 + Math.random()*30}px rgba(255,26,46,0.3), inset 0 0 40px rgba(0,0,0,0.8)`;
+    setTimeout(() => {
+      phone.style.boxShadow = `0 0 0 1px rgba(255,26,46,0.1), 0 0 30px rgba(255,26,46,0.25), 0 0 80px rgba(255,26,46,0.1), inset 0 0 40px rgba(0,0,0,0.8)`;
+    }, 100);
+  }, 4000 + Math.random() * 3000);
+</script>
+
+</body>
+</html>
