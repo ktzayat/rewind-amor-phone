@@ -1,0 +1,1766 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MESS//IA — Interface Interceptée</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #ff1a2e;
+    --red-dim: #8b0010;
+    --red-glow: rgba(255,26,46,0.25);
+    --cyan: #00f5ff;
+    --cyan-dim: #007a82;
+    --bg: #030508;
+    --grid: rgba(0,245,255,0.04);
+    --amber: #ffaa00;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #111318;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  /* Scanlines globales */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 4px);
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ========== PHONE SHELL ========== */
+  .phone-shell {
+    width: 360px;
+    height: 720px;
+    background: #0a0c12;
+    border-radius: 40px;
+    border: 2px solid #1a1d28;
+    box-shadow:
+      0 0 0 1px #0d0f18,
+      0 30px 80px rgba(0,0,0,0.8),
+      0 0 40px rgba(255,26,46,0.08),
+      inset 0 1px 0 rgba(255,255,255,0.04);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Encoche */
+  .phone-shell::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 26px;
+    background: #0a0c12;
+    border-radius: 0 0 18px 18px;
+    z-index: 200;
+    border: 2px solid #1a1d28;
+    border-top: none;
+  }
+
+  /* ========== BOOT SCREEN ========== */
+  #boot-screen {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 38px;
+    overflow: hidden;
+  }
+
+  #boot-screen.hidden { display: none; }
+
+  .boot-canvas {
+    position: absolute;
+    inset: 0;
+    border-radius: 38px;
+  }
+
+  .boot-logo {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    animation: boot-logo-in 0.5s 1.5s ease forwards;
+    opacity: 0;
+  }
+
+  @keyframes boot-logo-in {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .boot-logo-text {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--red);
+    letter-spacing: 6px;
+    text-shadow: 0 0 20px var(--red), 0 0 40px rgba(255,26,46,0.5);
+  }
+
+  .boot-logo-sub {
+    font-size: 9px;
+    color: rgba(255,26,46,0.5);
+    letter-spacing: 4px;
+    margin-top: 6px;
+  }
+
+  .boot-bar-wrap {
+    position: relative;
+    z-index: 10;
+    width: 160px;
+    height: 2px;
+    background: rgba(255,26,46,0.15);
+    border-radius: 1px;
+    margin-top: 30px;
+    overflow: hidden;
+  }
+
+  .boot-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--red-dim), var(--red));
+    width: 0;
+    box-shadow: 0 0 8px var(--red);
+    animation: boot-fill 2.5s 2s ease forwards;
+  }
+
+  @keyframes boot-fill {
+    0% { width: 0; }
+    100% { width: 100%; }
+  }
+
+  .boot-status {
+    position: relative;
+    z-index: 10;
+    font-size: 8px;
+    color: rgba(255,26,46,0.4);
+    letter-spacing: 2px;
+    margin-top: 12px;
+    animation: boot-status-anim 2.5s 2s steps(1) forwards;
+  }
+
+  @keyframes boot-status-anim {
+    0%   { content: 'INIT...'; }
+    33%  { color: rgba(255,26,46,0.6); }
+    66%  { color: rgba(0,245,255,0.4); }
+    100% { color: rgba(0,245,255,0.7); }
+  }
+
+  /* ========== HOME SCREEN ========== */
+  #home-screen {
+    position: absolute;
+    inset: 0;
+    background: var(--bg);
+    z-index: 50;
+    display: none;
+    flex-direction: column;
+    border-radius: 38px;
+    overflow: hidden;
+  }
+
+  #home-screen.visible { display: flex; }
+
+  .home-bg {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 30px 30px;
+  }
+
+  .home-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 30%, rgba(255,26,46,0.06) 0%, transparent 70%);
+  }
+
+  .home-status {
+    position: relative;
+    z-index: 10;
+    padding: 36px 20px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    color: rgba(255,255,255,0.4);
+  }
+
+  .home-time {
+    font-size: 42px;
+    font-weight: 900;
+    color: rgba(255,255,255,0.85);
+    text-align: center;
+    letter-spacing: 2px;
+    position: relative;
+    z-index: 10;
+    text-shadow: 0 0 30px rgba(255,255,255,0.1);
+    font-family: 'Orbitron', sans-serif;
+    padding: 0 20px;
+  }
+
+  .home-date {
+    text-align: center;
+    font-size: 10px;
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 3px;
+    position: relative;
+    z-index: 10;
+    margin-top: 6px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  .home-notif {
+    position: relative;
+    z-index: 20;
+    position: relative;
+    z-index: 10;
+    margin: 30px 16px 0;
+    background: rgba(255,26,46,0.06);
+    border: 1px solid rgba(255,26,46,0.2);
+    border-left: 3px solid var(--red);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    animation: notif-appear 0.4s 0.3s ease forwards;
+    opacity: 0;
+  }
+
+  .home-notif:hover {
+    background: rgba(255,26,46,0.1);
+    border-color: rgba(255,26,46,0.4);
+  }
+
+  @keyframes notif-appear {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .notif-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: rgba(255,26,46,0.15);
+    border: 1px solid var(--red-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .notif-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--red);
+    box-shadow: 0 0 8px var(--red);
+    font-size: 8px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Orbitron', sans-serif;
+    animation: badge-pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes badge-pulse {
+    0%, 100% { box-shadow: 0 0 8px var(--red); }
+    50% { box-shadow: 0 0 16px var(--red), 0 0 30px rgba(255,26,46,0.4); }
+  }
+
+  .notif-text { flex: 1; }
+
+  .notif-app {
+    font-size: 9px;
+    color: var(--red);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-family: 'Orbitron', sans-serif;
+  }
+
+  .notif-preview {
+    font-size: 11px;
+    color: rgba(255,255,255,0.6);
+    margin-top: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+  }
+
+  .notif-time-small {
+    font-size: 8px;
+    color: rgba(255,255,255,0.2);
+    align-self: flex-start;
+    padding-top: 2px;
+  }
+
+  /* App icons grid */
+  .home-apps {
+    position: relative;
+    z-index: 10;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    padding: 30px 24px;
+    margin-top: auto;
+  }
+
+  .app-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    opacity: 0.35;
+    transition: opacity 0.2s;
+  }
+
+  .app-icon.active {
+    opacity: 1;
+    cursor: pointer;
+  }
+
+  .app-icon-box {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    position: relative;
+  }
+
+  .app-icon.active .app-icon-box {
+    background: rgba(255,26,46,0.1);
+    border-color: rgba(255,26,46,0.3);
+    box-shadow: 0 0 12px rgba(255,26,46,0.15);
+  }
+
+  .app-label {
+    font-size: 8px;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .app-icon.active .app-label {
+    color: rgba(255,255,255,0.7);
+  }
+
+  /* ========== PHONE CONTENT (messagerie) ========== */
+  #phone-content {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    border-radius: 38px;
+    overflow: hidden;
+    z-index: 60;
+  }
+
+  #phone-content.visible { display: flex; }
+
+  /* Grid bg */
+  #phone-content::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 30px 30px;
+    pointer-events: none;
+    z-index: 0;
+    background-color: var(--bg);
+  }
+
+  /* STATUS BAR */
+  .status-bar {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 34px 20px 6px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    color: var(--red);
+    border-bottom: 1px solid rgba(255,26,46,0.15);
+    background: rgba(3,5,8,0.95);
+  }
+
+  .signal-bars {
+    display: flex;
+    gap: 2px;
+    align-items: flex-end;
+  }
+  .signal-bars span {
+    background: var(--red);
+    width: 3px;
+    display: block;
+    border-radius: 1px;
+    box-shadow: 0 0 4px var(--red);
+  }
+  .signal-bars span:nth-child(1) { height: 4px; }
+  .signal-bars span:nth-child(2) { height: 7px; }
+  .signal-bars span:nth-child(3) { height: 10px; opacity: 0.4; }
+  .signal-bars span:nth-child(4) { height: 13px; opacity: 0.2; }
+
+  .enc-badge {
+    font-size: 7px;
+    letter-spacing: 1px;
+    color: var(--cyan);
+    border: 1px solid var(--cyan-dim);
+    padding: 1px 4px;
+    border-radius: 2px;
+    animation: blink-enc 2s ease-in-out infinite;
+    text-shadow: 0 0 6px var(--cyan);
+  }
+
+  @keyframes blink-enc {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* HEADER */
+  .header {
+    position: relative;
+    z-index: 10;
+    background: linear-gradient(180deg, rgba(8,2,2,0.98) 0%, rgba(5,2,8,0.9) 100%);
+    border-bottom: 1px solid var(--red-dim);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 4px 20px rgba(255,26,46,0.15);
+  }
+
+  .back-btn {
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--red-dim);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--red);
+    font-size: 14px;
+    background: rgba(255,26,46,0.05);
+  }
+
+  .contact-info { flex: 1; display: flex; align-items: center; gap: 10px; }
+
+  .avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--red);
+    box-shadow: 0 0 10px var(--red-glow);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px; font-weight: 900;
+    color: var(--red);
+    background: rgba(255,26,46,0.08);
+    position: relative; overflow: hidden;
+  }
+
+  .contact-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px; font-weight: 700;
+    color: #fff; letter-spacing: 2px;
+    text-shadow: 0 0 10px rgba(255,255,255,0.3);
+  }
+
+  .contact-sub { font-size: 9px; color: var(--red-dim); letter-spacing: 1px; margin-top: 2px; }
+
+  .enc-status { font-size: 8px; color: var(--cyan); text-align: right; letter-spacing: 1px; }
+
+  .enc-dot {
+    display: inline-block; width: 5px; height: 5px;
+    border-radius: 50%; background: var(--cyan);
+    box-shadow: 0 0 6px var(--cyan); margin-right: 4px;
+    animation: pulse-dot 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  /* WARNING */
+  .warning-banner {
+    position: relative; z-index: 10;
+    background: rgba(255,170,0,0.08);
+    border-bottom: 1px solid rgba(255,170,0,0.3);
+    padding: 5px 16px;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 8px; color: var(--amber);
+    letter-spacing: 1.5px; text-transform: uppercase;
+  }
+  .warning-banner::before { content: '⚠'; font-size: 10px; }
+
+  /* MESSAGES AREA */
+  .messages {
+    flex: 1; overflow-y: auto;
+    padding: 20px 14px;
+    display: flex; flex-direction: column; gap: 16px;
+    position: relative; z-index: 5;
+  }
+  .messages::-webkit-scrollbar { width: 3px; }
+  .messages::-webkit-scrollbar-thumb { background: var(--red-dim); border-radius: 2px; }
+
+  .date-sep {
+    display: flex; align-items: center; gap: 10px;
+    color: rgba(255,255,255,0.2); font-size: 8px;
+    letter-spacing: 2px; text-transform: uppercase;
+  }
+  .date-sep::before, .date-sep::after {
+    content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.08);
+  }
+
+  .msg {
+    display: flex; flex-direction: column; max-width: 82%;
+    animation: msg-appear 0.4s ease forwards;
+    opacity: 0; transform: translateY(8px);
+  }
+  @keyframes msg-appear {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .msg.dexter { align-self: flex-start; align-items: flex-start; }
+  .msg.amor { align-self: flex-end; align-items: flex-end; }
+
+  .msg-sender {
+    font-size: 8px; letter-spacing: 2px; text-transform: uppercase;
+    margin-bottom: 4px; font-family: 'Orbitron', sans-serif;
+  }
+  .msg.dexter .msg-sender { color: var(--red); text-shadow: 0 0 8px var(--red); }
+  .msg.amor .msg-sender { color: var(--cyan); text-shadow: 0 0 8px var(--cyan); }
+
+  .bubble {
+    padding: 10px 14px; border-radius: 4px;
+    font-size: 11px; line-height: 1.6; letter-spacing: 0.5px;
+    position: relative; overflow: hidden;
+  }
+  .bubble::before {
+    content: ''; position: absolute; inset: 0; opacity: 0.03;
+    background: repeating-linear-gradient(45deg, rgba(255,255,255,0.1) 0px, rgba(255,255,255,0.1) 1px, transparent 1px, transparent 6px);
+  }
+
+  .msg.dexter .bubble {
+    background: rgba(15,3,5,0.95);
+    border: 1px solid var(--red-dim); border-left: 2px solid var(--red);
+    color: #ffd0d5;
+    box-shadow: 0 0 15px rgba(255,26,46,0.12), inset 0 0 20px rgba(255,26,46,0.05);
+    border-top-left-radius: 0;
+  }
+  .msg.amor .bubble {
+    background: rgba(0,10,15,0.95);
+    border: 1px solid var(--cyan-dim); border-right: 2px solid var(--cyan);
+    color: #c0f4ff;
+    box-shadow: 0 0 15px rgba(0,245,255,0.1), inset 0 0 20px rgba(0,245,255,0.03);
+    border-top-right-radius: 0;
+  }
+
+  .bubble.glitch { animation: glitch-text 6s ease-in-out infinite; }
+  @keyframes glitch-text {
+    0%, 90%, 100% { clip-path: none; transform: none; }
+    92% { clip-path: inset(10% 0 80% 0); transform: translate(-2px, 0); }
+    94% { clip-path: inset(60% 0 20% 0); transform: translate(2px, 0); }
+    96% { clip-path: none; transform: none; }
+  }
+
+  .msg-time { font-size: 8px; color: rgba(255,255,255,0.2); margin-top: 4px; letter-spacing: 1px; }
+
+  .enc {
+    font-family: 'Share Tech Mono', monospace;
+    background: rgba(255,170,0,0.1); border: 1px solid rgba(255,170,0,0.3);
+    color: var(--amber); padding: 0 4px; border-radius: 2px;
+    font-size: 10px; letter-spacing: 2px; text-shadow: 0 0 6px var(--amber);
+  }
+  .redacted {
+    background: rgba(255,26,46,0.6); color: rgba(255,26,46,0.6);
+    border-radius: 2px; user-select: none; letter-spacing: 0;
+  }
+  .coord {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 9px; color: var(--cyan);
+    border: 1px solid var(--cyan-dim); padding: 1px 5px;
+    border-radius: 2px; letter-spacing: 1px;
+    background: rgba(0,245,255,0.05);
+  }
+  .sys-msg {
+    align-self: center; font-size: 8px; color: rgba(255,26,46,0.5);
+    letter-spacing: 2px; text-transform: uppercase;
+    border: 1px solid rgba(255,26,46,0.15); padding: 4px 12px;
+    border-radius: 2px; background: rgba(255,26,46,0.03);
+    animation: msg-appear 0.4s 0.8s ease forwards; opacity: 0;
+  }
+  .sys-msg::before { content: '//'; margin-right: 6px; opacity: 0.5; }
+
+  .typing {
+    display: flex; align-items: center; gap: 4px;
+    padding: 10px 14px;
+    background: rgba(0,10,15,0.95);
+    border: 1px solid var(--cyan-dim); border-left: 2px solid var(--cyan);
+    border-radius: 4px; border-top-left-radius: 0;
+    width: fit-content; align-self: flex-start;
+  }
+  .typing-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--cyan); box-shadow: 0 0 4px var(--cyan);
+  }
+  .typing-dot:nth-child(1) { animation: typing-pulse 1.2s 0s ease-in-out infinite; }
+  .typing-dot:nth-child(2) { animation: typing-pulse 1.2s 0.3s ease-in-out infinite; }
+  .typing-dot:nth-child(3) { animation: typing-pulse 1.2s 0.6s ease-in-out infinite; }
+  @keyframes typing-pulse {
+    0%, 100% { opacity: 0.2; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.2); }
+  }
+
+  /* INPUT BAR */
+  .input-bar {
+    position: relative; z-index: 10;
+    background: rgba(3,5,8,0.98);
+    border-top: 1px solid var(--red-dim);
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 -4px 20px rgba(255,26,46,0.1);
+  }
+  .input-field {
+    flex: 1;
+    background: rgba(255,26,46,0.04);
+    border: 1px solid rgba(255,26,46,0.2);
+    border-radius: 4px; padding: 9px 12px;
+    font-family: 'Share Tech Mono', monospace; font-size: 11px;
+    color: rgba(255,200,200,0.5); letter-spacing: 1px; outline: none;
+  }
+  .enc-btn {
+    width: 34px; height: 34px;
+    border: 1px solid var(--red-dim); border-radius: 4px;
+    background: rgba(255,26,46,0.08); color: var(--red);
+    font-size: 14px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; box-shadow: 0 0 8px rgba(255,26,46,0.15);
+  }
+
+  /* DECODE OVERLAY */
+  .decode-overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.92);
+    z-index: 100; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 20px;
+    opacity: 0; pointer-events: none; transition: opacity 0.4s;
+    border-radius: 38px;
+  }
+  .decode-overlay.active { opacity: 1; pointer-events: all; }
+  .decode-hex {
+    font-family: 'Share Tech Mono', monospace; font-size: 8px;
+    color: var(--red); opacity: 0.4; letter-spacing: 3px;
+    text-align: center; padding: 0 30px; line-height: 1.8;
+  }
+  .decode-status {
+    font-family: 'Orbitron', sans-serif; font-size: 11px;
+    color: var(--cyan); letter-spacing: 4px;
+    text-shadow: 0 0 12px var(--cyan);
+    animation: blink-enc 0.8s ease-in-out infinite;
+  }
+  .decode-bar-wrap { width: 200px; height: 2px; background: rgba(255,255,255,0.1); border-radius: 1px; overflow: hidden; }
+  .decode-bar {
+    height: 100%; background: linear-gradient(90deg, var(--red), var(--cyan));
+    width: 0; border-radius: 1px; box-shadow: 0 0 8px var(--cyan);
+  }
+  @keyframes decode-fill { 0% { width: 0; } 100% { width: 100%; } }
+
+  /* Message animation delays */
+  .msg:nth-child(1) { animation-delay: 0.1s; }
+  .msg:nth-child(2) { animation-delay: 0.3s; }
+  .msg:nth-child(3) { animation-delay: 0.6s; }
+  .msg:nth-child(4) { animation-delay: 0.9s; }
+  .msg:nth-child(5) { animation-delay: 1.2s; }
+  .msg:nth-child(6) { animation-delay: 1.5s; }
+  .msg:nth-child(7) { animation-delay: 1.8s; }
+  .msg:nth-child(8) { animation-delay: 2.1s; }
+  .msg:nth-child(9) { animation-delay: 2.4s; }
+  .msg:nth-child(10) { animation-delay: 2.7s; }
+  .msg:nth-child(11) { animation-delay: 3.0s; }
+  .msg:nth-child(12) { animation-delay: 3.3s; }
+  .msg:nth-child(13) { animation-delay: 3.6s; }
+  .msg:nth-child(14) { animation-delay: 3.9s; }
+  .msg:nth-child(15) { animation-delay: 4.2s; }
+  .msg:nth-child(16) { animation-delay: 4.5s; }
+
+  /* ========== LOCK SCREEN ========== */
+  #lock-screen {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    z-index: 150;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 38px;
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  #lock-screen.hidden { display: none; }
+
+  .lock-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 50% 40%, rgba(255,26,46,0.08) 0%, transparent 60%),
+      repeating-linear-gradient(var(--grid) 1px, transparent 1px, transparent 30px),
+      repeating-linear-gradient(90deg, var(--grid) 1px, transparent 1px, transparent 30px);
+    background-color: #030508;
+  }
+
+  .lock-icon {
+    position: relative;
+    z-index: 10;
+    font-size: 48px;
+    animation: lock-float 3s ease-in-out infinite;
+    filter: drop-shadow(0 0 12px rgba(255,26,46,0.6));
+  }
+
+  @keyframes lock-float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .lock-label {
+    position: relative;
+    z-index: 10;
+    margin-top: 24px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    color: rgba(255,26,46,0.7);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    animation: lock-blink 2s ease-in-out infinite;
+  }
+
+  @keyframes lock-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .lock-sub {
+    position: relative;
+    z-index: 10;
+    margin-top: 8px;
+    font-size: 8px;
+    color: rgba(255,255,255,0.15);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .lock-line {
+    position: relative;
+    z-index: 10;
+    width: 60px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--red), transparent);
+    margin-top: 30px;
+    animation: lock-line-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes lock-line-pulse {
+    0%, 100% { width: 40px; opacity: 0.4; }
+    50% { width: 80px; opacity: 1; }
+  }
+
+  /* ========== MESSAGES OBSCURCIS ========== */
+  .messages.locked .msg .bubble,
+  .messages.locked .sys-msg {
+    filter: blur(4px);
+    user-select: none;
+    opacity: 0.5;
+    transition: filter 0.8s ease, opacity 0.8s ease;
+  }
+
+  .messages.locked .msg .msg-sender,
+  .messages.locked .msg .msg-time,
+  .messages.locked .date-sep {
+    filter: blur(3px);
+    opacity: 0.3;
+    transition: filter 0.8s ease, opacity 0.8s ease;
+  }
+
+  .messages.locked .typing {
+    display: none;
+  }
+
+  .messages.revealed .msg .bubble,
+  .messages.revealed .sys-msg {
+    filter: none;
+    opacity: 1;
+  }
+
+  .messages.revealed .msg .msg-sender,
+  .messages.revealed .msg .msg-time,
+  .messages.revealed .date-sep {
+    filter: none;
+    opacity: 1;
+  }
+
+  /* Hint text sur les messages floutés */
+  .locked-hint {
+    align-self: center;
+    font-size: 9px;
+    color: rgba(255,170,0,0.7);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border: 1px solid rgba(255,170,0,0.2);
+    padding: 6px 14px;
+    border-radius: 2px;
+    background: rgba(255,170,0,0.04);
+    animation: blink-enc 1.5s ease-in-out infinite;
+    margin: 10px 0;
+  }
+  .locked-hint::before { content: '🔐 '; }
+  .messages.revealed .locked-hint { display: none; }
+
+  /* ========== MINIGAME ========== */
+  .mg-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 0 20px;
+  }
+
+  .mg-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    color: var(--red);
+    letter-spacing: 4px;
+    text-shadow: 0 0 10px var(--red);
+    text-align: center;
+  }
+
+  .mg-sub {
+    font-size: 9px;
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 2px;
+    text-align: center;
+  }
+
+  .mg-seq-display {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .mg-seq-item {
+    width: 28px; height: 28px;
+    border: 1px solid var(--red-dim);
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px; font-weight: 700;
+    color: var(--red);
+    background: rgba(255,26,46,0.05);
+  }
+
+  .mg-seq-item.flash {
+    background: rgba(255,26,46,0.3);
+    box-shadow: 0 0 12px var(--red);
+    color: #fff;
+  }
+
+  .mg-pad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    width: 180px;
+  }
+
+  .mg-btn {
+    height: 36px;
+    border: 1px solid var(--red-dim);
+    border-radius: 4px;
+    background: rgba(255,26,46,0.05);
+    color: var(--red);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px; font-weight: 700;
+    cursor: pointer;
+    transition: all 0.1s;
+    letter-spacing: 1px;
+  }
+
+  .mg-btn:active, .mg-btn.pressed {
+    background: rgba(255,26,46,0.25);
+    box-shadow: 0 0 10px var(--red);
+    color: #fff;
+    transform: scale(0.95);
+  }
+
+  .mg-btn.correct {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan);
+  }
+
+  .mg-btn.wrong {
+    border-color: var(--red);
+    background: rgba(255,26,46,0.3);
+    animation: shake 0.3s ease;
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
+
+  .mg-input-display {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    letter-spacing: 6px;
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan);
+    min-height: 20px;
+    text-align: center;
+  }
+
+  .mg-error {
+    font-size: 9px;
+    color: var(--red);
+    letter-spacing: 2px;
+    text-align: center;
+    min-height: 14px;
+    animation: blink-enc 0.5s ease-in-out 3;
+  }
+
+  /* Step 2 - codes */
+  .mg-codes {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .mg-code-btn {
+    padding: 10px 14px;
+    border: 1px solid rgba(255,26,46,0.2);
+    border-radius: 4px;
+    background: rgba(255,26,46,0.03);
+    color: rgba(255,200,200,0.6);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+  }
+
+  .mg-code-btn:hover {
+    border-color: rgba(255,26,46,0.4);
+    background: rgba(255,26,46,0.08);
+    color: #fff;
+  }
+
+  .mg-code-btn.good {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    background: rgba(0,245,255,0.05);
+    box-shadow: 0 0 10px rgba(0,245,255,0.15);
+  }
+
+  .mg-code-btn.bad {
+    border-color: rgba(255,26,46,0.5);
+    background: rgba(255,26,46,0.1);
+    opacity: 0.4;
+    text-decoration: line-through;
+    pointer-events: none;
+  }
+
+  .decode-hex-small {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 7px;
+    color: var(--red);
+    opacity: 0.5;
+    letter-spacing: 2px;
+    text-align: center;
+    line-height: 1.8;
+    animation: hex-flicker 0.1s steps(1) infinite;
+  }
+
+  @keyframes hex-flicker {
+    0%   { opacity: 0.3; }
+    50%  { opacity: 0.6; }
+    100% { opacity: 0.4; }
+  }
+
+  .mg-percent {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--cyan);
+    text-shadow: 0 0 12px var(--cyan);
+    letter-spacing: 3px;
+  }
+
+  @keyframes decode-fill { 0% { width: 0; } 100% { width: 100%; } }
+</style>
+</head>
+<body>
+
+<div class="phone-shell">
+
+
+  <!-- ===== LOCK SCREEN ===== -->
+  <div id="lock-screen" onclick="unlockPhone()">
+    <div class="lock-bg"></div>
+    <div class="lock-icon">🔒</div>
+    <div class="lock-label">Appuyer pour déverrouiller</div>
+    <div class="lock-sub">MESS // IA — ACCÈS SÉCURISÉ</div>
+    <div class="lock-line"></div>
+  </div>
+
+  <!-- ===== BOOT SCREEN ===== -->
+  <div id="boot-screen" style="display:none;">
+    <canvas class="boot-canvas" id="matrixCanvas"></canvas>
+    <div class="boot-logo">
+      <div class="boot-logo-text">MESS</div>
+      <div class="boot-logo-sub">MOSSEBA SECURE LAYER</div>
+    </div>
+    <div class="boot-bar-wrap">
+      <div class="boot-bar"></div>
+    </div>
+    <div class="boot-status" id="bootStatus">INIT SYSTÈME...</div>
+  </div>
+
+  <!-- ===== HOME SCREEN ===== -->
+  <div id="home-screen">
+    <div class="home-bg"></div>
+
+    <div class="home-status">
+      <div class="signal-bars">
+        <span></span><span></span><span></span><span></span>
+      </div>
+      <span class="enc-badge">CRYPTÉ</span>
+    </div>
+
+    
+    <div class="home-date" style="margin-top:30px;">2035.02.18 // SECTOR-7</div>
+
+    <!-- Notification cliquable -->
+    <div class="home-notif" onclick="openMessages()">
+      <div class="notif-icon">
+        💬
+        <div class="notif-badge">1</div>
+      </div>
+      <div class="notif-text">
+        <div class="notif-app">MESSAGES SÉCURISÉS</div>
+        <div class="notif-preview">DEX : Tsukino est mort cette nuit...</div>
+      </div>
+      <div class="notif-time-small">04:08</div>
+    </div>
+
+    <!-- Icônes apps -->
+    <div class="home-apps">
+      <div class="app-icon active" onclick="openMessages()">
+        <div class="app-icon-box">💬</div>
+        <div class="app-label">Messages</div>
+      </div>
+      <div class="app-icon">
+        <div class="app-icon-box">📡</div>
+        <div class="app-label">Réseau</div>
+      </div>
+      <div class="app-icon">
+        <div class="app-icon-box">🔒</div>
+        <div class="app-label">Vault</div>
+      </div>
+      <div class="app-icon">
+        <div class="app-icon-box">📋</div>
+        <div class="app-label">Fichiers</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MESSAGES ===== -->
+  <div id="phone-content">
+
+    <div class="status-bar">
+      <div class="signal-bars">
+        <span></span><span></span><span></span><span></span>
+      </div>
+      <div class="enc-badge">CHIFFRÉ</div>
+    </div>
+
+    <div class="header">
+      <div class="back-btn" onclick="goHome()">◂</div>
+      <div class="contact-info">
+        <div class="avatar">DX</div>
+        <div>
+          <div class="contact-name">DEX</div>
+          <div class="contact-sub">CERBERUS // DIRECTEUR</div>
+        </div>
+      </div>
+      <div>
+        <div class="enc-status"><span class="enc-dot"></span>CRYPTÉ E2E</div>
+        <div class="enc-status" style="margin-top:2px; color: rgba(255,26,46,0.5);">CANAL SÉCURISÉ-7</div>
+      </div>
+    </div>
+
+    <div class="warning-banner">
+      COMMUNICATION INTERCEPTÉE — FRAGMENT DÉCHIFFRÉ PARTIEL
+    </div>
+
+    <div class="messages locked" id="messages">
+
+      <div class="locked-hint">Données chiffrées — déchiffrer pour lire</div>
+      <div class="date-sep">2035.02.18 — SESSION RECONSTRUITE</div>
+
+      <div class="msg amor">
+        <div class="msg-sender">AMOR</div>
+        <div class="bubble glitch">
+          C'était toi. Dis-moi que c'était pas toi. Les chiens qui ont tourné autour du <span class="enc">NŒUD-09</span> cette nuit, c'est Cerberus ?
+        </div>
+        <div class="msg-time">03:11:22</div>
+      </div>
+
+      <div class="msg dexter">
+        <div class="msg-sender">DEX</div>
+        <div class="bubble">
+          Tel Aviv, oui. C'était moi. Mais écoute-moi avant de faire quoi que ce soit.
+        </div>
+        <div class="msg-time">03:12:08</div>
+      </div>
+
+      <div class="msg amor">
+        <div class="msg-sender">AMOR</div>
+        <div class="bubble">
+          Non. <strong>Non.</strong> On avait un accord. Mes agents étaient à <span class="coord">📍 SECTEUR-SUD</span> cette nuit. Tu aurais pu les brûler. Tu peux plus me garantir RIEN, Dex.
+          <br><br>
+          Comment je suis censée continuer <span class="enc">PROJET-MESS</span> si tu envoies tes gens sans me prévenir ?
+        </div>
+        <div class="msg-time">03:13:41</div>
+      </div>
+
+      <div class="sys-msg">LACUNE DE TRANSMISSION — 02min 17sec</div>
+
+      <div class="msg dexter">
+        <div class="msg-sender">DEX</div>
+        <div class="bubble">
+          C'est moi qui ai ordonné Tel Aviv, je te le confirme. Mais cette nuit c'est différent. Quelqu'un utilise nos protocoles sans autorisation, une fuite interne ou quelqu'un qui connaît nos méthodes.
+        </div>
+        <div class="msg-time">03:16:03</div>
+      </div>
+
+      <div class="msg dexter">
+        <div class="msg-sender">DEX</div>
+        <div class="bubble glitch">
+          Je vais régler ça. Donne-moi <span class="enc">H-48</span>. Personne d'autre ne s'approche du projet.
+        </div>
+        <div class="msg-time">03:16:44</div>
+      </div>
+
+      <div class="msg amor">
+        <div class="msg-sender">AMOR</div>
+        <div class="bubble">
+          Tu dis "quelqu'un qui connaît nos méthodes". Tu parles de <span class="redacted">██████</span> ? Parce que si c'est lui, il sait tout sur <span class="enc">SEUIL-Ω</span>. Il a été là dès le début.
+        </div>
+        <div class="msg-time">03:18:02</div>
+      </div>
+
+      <div class="msg dexter">
+        <div class="msg-sender">DEX</div>
+        <div class="bubble">
+          Il ne parlera pas. Il sait ce qu'il risque. Et ses données sont encore dans le réseau, on le tient par là.
+          <br><br>
+          Mais si tes agents remontent jusqu'à lui avant nous, c'est un problème pour les <em>deux</em>.
+        </div>
+        <div class="msg-time">03:19:55</div>
+      </div>
+
+      <div class="msg amor">
+        <div class="msg-sender">AMOR</div>
+        <div class="bubble">
+          Mes agents ne savent rien. Encore. Mais si la fusion dérape à cause d'une variable qu'on maîtrise pas,
+          <br><br>
+          Le sujet <span class="enc">J-JOHNSON</span> pose déjà des questions. Son frère est un levier, mais c'est fragile.
+        </div>
+        <div class="msg-time">03:21:12</div>
+      </div>
+
+      <div class="msg dexter">
+        <div class="msg-sender">DEX</div>
+        <div class="bubble">
+          On a construit ce projet ensemble, Amor. Chaque fragment, chaque puce. La ressource qu'on crée ensemble, personne d'autre ne peut le faire.
+          <br><br>
+          Je règle le problème. Tu tiens tes agents. <span class="redacted">███████████████████████</span>
+        </div>
+        <div class="msg-time">03:22:30</div>
+      </div>
+
+      <div class="msg amor">
+        <div class="msg-sender">AMOR</div>
+        <div class="bubble glitch">
+          Une dernière chose. Ce canal s'efface dans <span class="enc">08:00</span>.
+          <br>
+          Si quelqu'un lit ça, dis-toi qu'il est déjà trop tard pour comprendre ce qu'on a construit.
+        </div>
+        <div class="msg-time">03:23:47</div>
+      </div>
+
+      <div class="date-sep">2035.02.18 — 04:01 — FRAGMENT SUIVANT</div>
+
+      <div class="msg dexter">
+        <div class="msg-sender">DEX</div>
+        <div class="bubble">
+          Tsukino est mort cette nuit. Officiel. Tu sais comme moi que "mort" ne veut plus rien dire depuis que <span class="enc">SOVEREIGN</span> est impliqué.
+        </div>
+        <div class="msg-time">04:01:12</div>
+      </div>
+
+      <div class="msg amor">
+        <div class="msg-sender">AMOR</div>
+        <div class="bubble">
+          Roy Tsukino était déclaré mort il y a <span class="enc">4 MOIS</span>. Tout le monde le sait. Ce que personne ne sait, c'est ce que Sovereign lui a fait pour qu'il continue à marcher, parler, respirer.
+        </div>
+        <div class="msg-time">04:02:45</div>
+      </div>
+
+      <div class="msg dexter">
+        <div class="msg-sender">DEX</div>
+        <div class="bubble glitch">
+          Il était un élément crucial. Les données qu'il portait, pas dans une puce, <em>dans ses cellules</em>, on ne peut pas les récupérer si le corps est détruit. Sovereign savait ça.
+        </div>
+        <div class="msg-time">04:03:58</div>
+      </div>
+
+      <div class="msg amor">
+        <div class="msg-sender">AMOR</div>
+        <div class="bubble">
+          Sovereign a utilisé une variante du <span class="enc">PROTOCOLE-MESS</span> sur lui. Maintien neurologique post-mortem. Roy ne vivait plus, il <em>fonctionnait</em>. Comme une archive ambulante qu'on pouvait interroger.
+          <br><br>
+          La différence entre lui et nos fragments, c'est qu'il avait encore un visage.
+        </div>
+        <div class="msg-time">04:05:22</div>
+      </div>
+
+      <div class="msg dexter">
+        <div class="msg-sender">DEX</div>
+        <div class="bubble">
+          Si tes agents ont été en contact avec lui sans savoir ce qu'il était, ils ont peut-être absorbé des données sans le réaliser. Une contamination passive via <span class="enc">SEUIL-Ω</span>.
+        </div>
+        <div class="msg-time">04:06:44</div>
+      </div>
+
+      <div class="msg amor">
+        <div class="msg-sender">AMOR</div>
+        <div class="bubble glitch">
+          Je sais.
+          <br><br>
+          C'est pour ça que je ne leur ai rien dit sur Roy. <span class="redacted">████████████████████████████████</span>
+          <br><br>
+          Certaines vérités les rendraient inutilisables.
+        </div>
+        <div class="msg-time">04:08:03</div>
+      </div>
+
+      <div class="typing" id="typing" style="opacity:0; animation: msg-appear 0.4s 5s ease forwards;">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>
+
+    </div>
+
+    <div class="input-bar">
+      <div class="input-field">ACCÈS RESTREINT</div>
+      <div class="enc-btn" onclick="triggerDecode()">🔐</div>
+    </div>
+
+    <!-- MINIGAME OVERLAY -->
+    <div class="decode-overlay" id="decodeOverlay">
+
+      <!-- ÉTAPE 1 : séquence de touches -->
+      <div id="step1" class="mg-step">
+        <div class="mg-title">PROTOCOLE D'ACCÈS</div>
+        <div class="mg-sub">Reproduisez la séquence dans l'ordre</div>
+        <div class="mg-seq-display" id="seqDisplay"></div>
+        <div class="mg-pad" id="mgPad">
+          <button class="mg-btn" data-val="A" onclick="padPress('A')">A</button>
+          <button class="mg-btn" data-val="B" onclick="padPress('B')">B</button>
+          <button class="mg-btn" data-val="C" onclick="padPress('C')">C</button>
+          <button class="mg-btn" data-val="D" onclick="padPress('D')">D</button>
+          <button class="mg-btn" data-val="E" onclick="padPress('E')">E</button>
+          <button class="mg-btn" data-val="F" onclick="padPress('F')">F</button>
+        </div>
+        <div class="mg-input-display" id="inputDisplay">_</div>
+        <div class="mg-error" id="step1Error"></div>
+      </div>
+
+      <!-- ÉTAPE 2 : trouver le bon code parmi des faux -->
+      <div id="step2" class="mg-step" style="display:none;">
+        <div class="mg-title">ISOLATION DU FRAGMENT</div>
+        <div class="mg-sub">Un seul code est valide. Identifiez-le.</div>
+        <div class="mg-codes" id="mgCodes"></div>
+        <div class="mg-error" id="step2Error"></div>
+      </div>
+
+      <!-- ÉTAPE 3 : barre de déchiffrement final -->
+      <div id="step3" class="mg-step" style="display:none;">
+        <div class="mg-title">DÉCHIFFREMENT EN COURS</div>
+        <div class="decode-hex-small" id="hexScroll"></div>
+        <div class="decode-bar-wrap" style="width:220px; margin-top:16px;">
+          <div class="decode-bar" id="decodeBar"></div>
+        </div>
+        <div class="mg-percent" id="mgPercent">0%</div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ===== MATRIX BOOT =====
+const canvas = document.getElementById('matrixCanvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  canvas.width = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+}
+resizeCanvas();
+
+const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ@#$%&アイウエオカキクケコ';
+const fontSize = 10;
+const cols = Math.floor(canvas.width / fontSize);
+const drops = Array(cols).fill(1);
+
+function drawMatrix() {
+  ctx.fillStyle = 'rgba(0,0,0,0.05)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#ff1a2e';
+  ctx.font = fontSize + 'px Share Tech Mono';
+  for (let i = 0; i < drops.length; i++) {
+    const text = chars[Math.floor(Math.random() * chars.length)];
+    ctx.fillStyle = Math.random() > 0.95 ? '#fff' : `rgba(255,${Math.floor(Math.random()*30)},46,${0.4 + Math.random()*0.6})`;
+    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+    drops[i]++;
+  }
+}
+
+let matrixInterval = setInterval(drawMatrix, 40);
+
+// Boot sequence statuses
+const bootMessages = [
+  'INIT SYSTÈME...',
+  'CHARGEMENT KERNEL...',
+  'VÉRIFICATION INTÉGRITÉ...',
+  'PROTOCOLES SÉCURISÉS...',
+  'CONNEXION ÉTABLIE',
+  'ACCÈS AUTORISÉ'
+];
+let bootIdx = 0;
+const bootStatusEl = document.getElementById('bootStatus');
+
+const bootMsgInterval = setInterval(() => {
+  bootIdx++;
+  if (bootIdx < bootMessages.length) {
+    bootStatusEl.textContent = bootMessages[bootIdx];
+    if (bootIdx === bootMessages.length - 1) {
+      bootStatusEl.style.color = 'rgba(0,245,255,0.8)';
+    }
+  }
+}, 500);
+
+// Transition boot -> home
+setTimeout(() => {
+  clearInterval(matrixInterval);
+  clearInterval(bootMsgInterval);
+  const boot = document.getElementById('boot-screen');
+  boot.style.transition = 'opacity 0.6s';
+  boot.style.opacity = '0';
+  setTimeout(() => {
+    boot.style.display = 'none';
+    const home = document.getElementById('home-screen');
+    home.classList.add('visible');
+    home.style.opacity = '0';
+    home.style.transition = 'opacity 0.5s';
+    requestAnimationFrame(() => { home.style.opacity = '1'; });
+  }, 600);
+}, 5000);
+
+// ===== HOME CLOCK =====
+function updateHomeTime() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('homeTime').textContent = h + ':' + m;
+}
+setInterval(updateHomeTime, 10000);
+
+// ===== OPEN MESSAGES =====
+function openMessages() {
+  playClickSound();
+  const home = document.getElementById('home-screen');
+  const content = document.getElementById('phone-content');
+  home.style.transition = 'opacity 0.3s';
+  home.style.opacity = '0';
+  setTimeout(() => {
+    home.classList.remove('visible');
+    content.classList.add('visible');
+    content.style.opacity = '0';
+    content.style.transition = 'opacity 0.3s';
+    requestAnimationFrame(() => { content.style.opacity = '1'; });
+    // don't auto-scroll — messages are locked until decrypted
+  }, 300);
+}
+
+// ===== GO BACK HOME =====
+function goHome() {
+  playBackSound();
+  const home = document.getElementById('home-screen');
+  const content = document.getElementById('phone-content');
+  content.style.transition = 'opacity 0.3s';
+  content.style.opacity = '0';
+  setTimeout(() => {
+    content.classList.remove('visible');
+    home.classList.add('visible');
+    home.style.transition = 'opacity 0.3s';
+    home.style.opacity = '0';
+    requestAnimationFrame(() => { home.style.opacity = '1'; });
+  }, 300);
+}
+
+// ===== DECODE OVERLAY =====
+// ===== MINIGAME =====
+const SECRET_SEQ = ['A','D','B','F','C'];
+let playerInput = [];
+let seqRevealed = false;
+
+function triggerDecode() {
+  const overlay = document.getElementById('decodeOverlay');
+  overlay.classList.add('active');
+  startStep1();
+}
+
+// --- STEP 1 : séquence ---
+function startStep1() {
+  playerInput = [];
+  document.getElementById('inputDisplay').textContent = '_';
+  document.getElementById('step1Error').textContent = '';
+  buildSeqDisplay();
+  playSequenceAnimation();
+}
+
+function buildSeqDisplay() {
+  const el = document.getElementById('seqDisplay');
+  el.innerHTML = '';
+  SECRET_SEQ.forEach((c, i) => {
+    const div = document.createElement('div');
+    div.className = 'mg-seq-item';
+    div.id = 'seq_' + i;
+    div.textContent = '?';
+    el.appendChild(div);
+  });
+}
+
+function playSequenceAnimation() {
+  // Flash each key one by one
+  SECRET_SEQ.forEach((c, i) => {
+    setTimeout(() => {
+      const el = document.getElementById('seq_' + i);
+      el.textContent = c;
+      el.classList.add('flash');
+      playClickSound();
+      setTimeout(() => {
+        el.classList.remove('flash');
+        el.textContent = '?';
+        if (i === SECRET_SEQ.length - 1) {
+          seqRevealed = true;
+        }
+      }, 400);
+    }, i * 500 + 300);
+  });
+}
+
+function padPress(val) {
+  if (!seqRevealed) return;
+  playClickSound();
+
+  // Flash button
+  const btn = document.querySelector('.mg-btn[data-val="' + val + '"]');
+  btn.classList.add('pressed');
+  setTimeout(() => btn.classList.remove('pressed'), 150);
+
+  playerInput.push(val);
+  const idx = playerInput.length - 1;
+
+  document.getElementById('inputDisplay').textContent = playerInput.join(' ');
+
+  // Check current input
+  if (playerInput[idx] !== SECRET_SEQ[idx]) {
+    // Wrong
+    btn.classList.add('wrong');
+    setTimeout(() => btn.classList.remove('wrong'), 400);
+    document.getElementById('step1Error').textContent = '✗ SÉQUENCE INCORRECTE — RÉINITIALISATION';
+    playerInput = [];
+    setTimeout(() => {
+      document.getElementById('step1Error').textContent = '';
+      document.getElementById('inputDisplay').textContent = '_';
+      playSequenceAnimation();
+    }, 1200);
+    return;
+  }
+
+  btn.classList.add('correct');
+  setTimeout(() => btn.classList.remove('correct'), 300);
+
+  if (playerInput.length === SECRET_SEQ.length) {
+    // Step 1 complete
+    document.getElementById('step1Error').textContent = '';
+    setTimeout(() => goStep2(), 600);
+  }
+}
+
+// --- STEP 2 : trouver le bon code ---
+const REAL_CODE = 'M3SS-ΩB4-C4N4L7';
+const FAKE_CODES = [
+  'X9RR-4F1A-B7K22',
+  'C3RB-ERU5-00X11',
+  'N0D3-09AF-T3L4V',
+  'PR0T-0MSS-GH778',
+  'D4T4-FR4G-J0HN5',
+  'S3UL-OMG4-R3W1N',
+];
+
+function goStep2() {
+  document.getElementById('step1').style.display = 'none';
+  document.getElementById('step2').style.display = 'flex';
+
+  // Shuffle codes with real one inserted randomly
+  const allCodes = [...FAKE_CODES];
+  const realPos = Math.floor(Math.random() * (allCodes.length + 1));
+  allCodes.splice(realPos, 0, REAL_CODE);
+
+  const container = document.getElementById('mgCodes');
+  container.innerHTML = '';
+  allCodes.forEach(code => {
+    const btn = document.createElement('button');
+    btn.className = 'mg-code-btn';
+    btn.textContent = code;
+    btn.onclick = () => codePress(btn, code);
+    container.appendChild(btn);
+  });
+}
+
+function codePress(btn, code) {
+  playClickSound();
+  if (code === REAL_CODE) {
+    btn.classList.add('good');
+    setTimeout(() => goStep3(), 700);
+  } else {
+    btn.classList.add('bad');
+    document.getElementById('step2Error').textContent = '✗ CODE INVALIDE';
+    setTimeout(() => { document.getElementById('step2Error').textContent = ''; }, 1500);
+  }
+}
+
+// --- STEP 3 : déchiffrement final ---
+const hexLines = [
+  '4D455353 2F2F4941 43414E41 4C2D3720 53454355',
+  '52455F4C 4159455220 4D4F5353 45424120 50524F54',
+  '4F434F4C 455F4D45 53532041 4343455353 47524E54',
+  '46524147 4D454E54 20444543 52595054 20494E49',
+];
+
+function goStep3() {
+  document.getElementById('step2').style.display = 'none';
+  document.getElementById('step3').style.display = 'flex';
+
+  const bar = document.getElementById('decodeBar');
+  bar.style.animation = 'none';
+  bar.offsetHeight;
+  bar.style.animation = 'decode-fill 4s ease forwards';
+
+  // Animated hex
+  let lineIdx = 0;
+  const hexEl = document.getElementById('hexScroll');
+  const hexInterval = setInterval(() => {
+    hexEl.textContent = hexLines[lineIdx % hexLines.length];
+    lineIdx++;
+  }, 200);
+
+  // Percent counter
+  let pct = 0;
+  const pctEl = document.getElementById('mgPercent');
+  const pctInterval = setInterval(() => {
+    pct += Math.floor(Math.random() * 4) + 1;
+    if (pct >= 100) { pct = 100; clearInterval(pctInterval); }
+    pctEl.textContent = pct + '%';
+  }, 100);
+
+  setTimeout(() => {
+    clearInterval(hexInterval);
+    const overlay = document.getElementById('decodeOverlay');
+    overlay.classList.remove('active');
+    // Reset steps for next time
+    document.getElementById('step1').style.display = 'flex';
+    document.getElementById('step2').style.display = 'none';
+    document.getElementById('step3').style.display = 'none';
+
+    const messages = document.getElementById('messages');
+    messages.classList.remove('locked');
+    messages.classList.add('revealed');
+    setTimeout(() => { messages.scrollTop = messages.scrollHeight; }, 500);
+  }, 4200);
+}
+
+// ===== AUDIO ENGINE =====
+let audioCtx = null;
+
+function getAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function tone(freq, start, dur, vol, type='sine', fadeIn=0.01, fadeOut=0.05) {
+  const ac = getAudio();
+  const osc = ac.createOscillator();
+  const gain = ac.createGain();
+  osc.connect(gain); gain.connect(ac.destination);
+  osc.frequency.value = freq; osc.type = type;
+  const t = ac.currentTime + start;
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(vol, t + fadeIn);
+  gain.gain.setValueAtTime(vol, t + dur - fadeOut);
+  gain.gain.linearRampToValueAtTime(0, t + dur);
+  osc.start(t); osc.stop(t + dur + 0.02);
+}
+
+function noise(start, dur, vol) {
+  const ac = getAudio();
+  const bufSize = ac.sampleRate * dur;
+  const buf = ac.createBuffer(1, bufSize, ac.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * 0.3;
+  const src = ac.createBufferSource();
+  const gain = ac.createGain();
+  const filter = ac.createBiquadFilter();
+  filter.type = 'bandpass'; filter.frequency.value = 800; filter.Q.value = 0.5;
+  src.buffer = buf;
+  src.connect(filter); filter.connect(gain); gain.connect(ac.destination);
+  const t = ac.currentTime + start;
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(vol, t + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  src.start(t); src.stop(t + dur + 0.05);
+}
+
+// Son de démarrage — grave, long, cinématique
+function playBootSound() {
+  // Grondement sourd initial
+  tone(40,  0,    1.5,  0.08, 'sine');
+  tone(60,  0,    1.5,  0.05, 'sine');
+  noise(0, 0.3, 0.02);
+
+  // Bips de boot séquenciels
+  tone(220, 0.4,  0.08, 0.04, 'square');
+  tone(330, 0.55, 0.06, 0.04, 'square');
+  tone(440, 0.68, 0.06, 0.04, 'square');
+  tone(660, 0.80, 0.06, 0.04, 'square');
+  tone(880, 0.90, 0.06, 0.04, 'square');
+
+  // Scan numérique montant
+  for (let i = 0; i < 20; i++) {
+    tone(100 + i * 80, 1.0 + i * 0.06, 0.07, 0.015, 'sawtooth');
+  }
+
+  // Choc métallique à la fin
+  noise(2.8, 0.15, 0.06);
+  tone(80,  2.8,  0.4,  0.06, 'sine');
+  tone(160, 2.82, 0.3,  0.04, 'sine');
+
+  // Son d'accès autorisé — deux tons nets
+  tone(880, 3.3, 0.12, 0.05, 'sine');
+  tone(1320,3.5, 0.18, 0.05, 'sine');
+  tone(1760,3.7, 0.25, 0.04, 'sine');
+}
+
+// Clic futuriste — court, précis, électronique
+function playClickSound() {
+  const ac = getAudio();
+  // Tick high
+  tone(1800, 0,    0.04, 0.06, 'square', 0.002, 0.02);
+  tone(900,  0.02, 0.06, 0.04, 'sine',   0.002, 0.04);
+  noise(0, 0.04, 0.03);
+}
+
+// Clic de retour (légèrement différent)
+function playBackSound() {
+  tone(600, 0,    0.05, 0.05, 'square', 0.002, 0.03);
+  tone(300, 0.03, 0.08, 0.04, 'sine',   0.002, 0.06);
+  noise(0, 0.03, 0.02);
+}
+
+// ===== UNLOCK =====
+function unlockPhone() {
+  getAudio();
+  const lock = document.getElementById('lock-screen');
+  const boot = document.getElementById('boot-screen');
+
+  // Animate lock icon
+  lock.querySelector('.lock-icon').textContent = '🔓';
+  lock.querySelector('.lock-label').textContent = 'Déverrouillage...';
+
+  setTimeout(() => {
+    lock.style.transition = 'opacity 0.5s';
+    lock.style.opacity = '0';
+    setTimeout(() => {
+      lock.classList.add('hidden');
+      boot.style.display = 'flex';
+      boot.style.opacity = '0';
+      boot.style.transition = 'opacity 0.4s';
+      requestAnimationFrame(() => { boot.style.opacity = '1'; });
+      playBootSound();
+    }, 500);
+  }, 400);
+}
+</script>
+
+</body>
+</html>
