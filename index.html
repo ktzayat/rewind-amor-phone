@@ -232,6 +232,8 @@
 
   .home-notif {
     position: relative;
+    z-index: 20;
+    position: relative;
     z-index: 10;
     margin: 30px 16px 0;
     background: rgba(255,26,46,0.06);
@@ -718,18 +720,346 @@
   .msg:nth-child(14) { animation-delay: 3.9s; }
   .msg:nth-child(15) { animation-delay: 4.2s; }
   .msg:nth-child(16) { animation-delay: 4.5s; }
+
+  /* ========== LOCK SCREEN ========== */
+  #lock-screen {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    z-index: 150;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 38px;
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  #lock-screen.hidden { display: none; }
+
+  .lock-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 50% 40%, rgba(255,26,46,0.08) 0%, transparent 60%),
+      repeating-linear-gradient(var(--grid) 1px, transparent 1px, transparent 30px),
+      repeating-linear-gradient(90deg, var(--grid) 1px, transparent 1px, transparent 30px);
+    background-color: #030508;
+  }
+
+  .lock-icon {
+    position: relative;
+    z-index: 10;
+    font-size: 48px;
+    animation: lock-float 3s ease-in-out infinite;
+    filter: drop-shadow(0 0 12px rgba(255,26,46,0.6));
+  }
+
+  @keyframes lock-float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .lock-label {
+    position: relative;
+    z-index: 10;
+    margin-top: 24px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    color: rgba(255,26,46,0.7);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    animation: lock-blink 2s ease-in-out infinite;
+  }
+
+  @keyframes lock-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .lock-sub {
+    position: relative;
+    z-index: 10;
+    margin-top: 8px;
+    font-size: 8px;
+    color: rgba(255,255,255,0.15);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .lock-line {
+    position: relative;
+    z-index: 10;
+    width: 60px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--red), transparent);
+    margin-top: 30px;
+    animation: lock-line-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes lock-line-pulse {
+    0%, 100% { width: 40px; opacity: 0.4; }
+    50% { width: 80px; opacity: 1; }
+  }
+
+  /* ========== MESSAGES OBSCURCIS ========== */
+  .messages.locked .msg .bubble,
+  .messages.locked .sys-msg {
+    filter: blur(4px);
+    user-select: none;
+    opacity: 0.5;
+    transition: filter 0.8s ease, opacity 0.8s ease;
+  }
+
+  .messages.locked .msg .msg-sender,
+  .messages.locked .msg .msg-time,
+  .messages.locked .date-sep {
+    filter: blur(3px);
+    opacity: 0.3;
+    transition: filter 0.8s ease, opacity 0.8s ease;
+  }
+
+  .messages.locked .typing {
+    display: none;
+  }
+
+  .messages.revealed .msg .bubble,
+  .messages.revealed .sys-msg {
+    filter: none;
+    opacity: 1;
+  }
+
+  .messages.revealed .msg .msg-sender,
+  .messages.revealed .msg .msg-time,
+  .messages.revealed .date-sep {
+    filter: none;
+    opacity: 1;
+  }
+
+  /* Hint text sur les messages floutés */
+  .locked-hint {
+    align-self: center;
+    font-size: 9px;
+    color: rgba(255,170,0,0.7);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border: 1px solid rgba(255,170,0,0.2);
+    padding: 6px 14px;
+    border-radius: 2px;
+    background: rgba(255,170,0,0.04);
+    animation: blink-enc 1.5s ease-in-out infinite;
+    margin: 10px 0;
+  }
+  .locked-hint::before { content: '🔐 '; }
+  .messages.revealed .locked-hint { display: none; }
+
+  /* ========== MINIGAME ========== */
+  .mg-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 0 20px;
+  }
+
+  .mg-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    color: var(--red);
+    letter-spacing: 4px;
+    text-shadow: 0 0 10px var(--red);
+    text-align: center;
+  }
+
+  .mg-sub {
+    font-size: 9px;
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 2px;
+    text-align: center;
+  }
+
+  .mg-seq-display {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .mg-seq-item {
+    width: 28px; height: 28px;
+    border: 1px solid var(--red-dim);
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px; font-weight: 700;
+    color: var(--red);
+    background: rgba(255,26,46,0.05);
+  }
+
+  .mg-seq-item.flash {
+    background: rgba(255,26,46,0.3);
+    box-shadow: 0 0 12px var(--red);
+    color: #fff;
+  }
+
+  .mg-pad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    width: 180px;
+  }
+
+  .mg-btn {
+    height: 36px;
+    border: 1px solid var(--red-dim);
+    border-radius: 4px;
+    background: rgba(255,26,46,0.05);
+    color: var(--red);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px; font-weight: 700;
+    cursor: pointer;
+    transition: all 0.1s;
+    letter-spacing: 1px;
+  }
+
+  .mg-btn:active, .mg-btn.pressed {
+    background: rgba(255,26,46,0.25);
+    box-shadow: 0 0 10px var(--red);
+    color: #fff;
+    transform: scale(0.95);
+  }
+
+  .mg-btn.correct {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan);
+  }
+
+  .mg-btn.wrong {
+    border-color: var(--red);
+    background: rgba(255,26,46,0.3);
+    animation: shake 0.3s ease;
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
+
+  .mg-input-display {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    letter-spacing: 6px;
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan);
+    min-height: 20px;
+    text-align: center;
+  }
+
+  .mg-error {
+    font-size: 9px;
+    color: var(--red);
+    letter-spacing: 2px;
+    text-align: center;
+    min-height: 14px;
+    animation: blink-enc 0.5s ease-in-out 3;
+  }
+
+  /* Step 2 - codes */
+  .mg-codes {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .mg-code-btn {
+    padding: 10px 14px;
+    border: 1px solid rgba(255,26,46,0.2);
+    border-radius: 4px;
+    background: rgba(255,26,46,0.03);
+    color: rgba(255,200,200,0.6);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+  }
+
+  .mg-code-btn:hover {
+    border-color: rgba(255,26,46,0.4);
+    background: rgba(255,26,46,0.08);
+    color: #fff;
+  }
+
+  .mg-code-btn.good {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    background: rgba(0,245,255,0.05);
+    box-shadow: 0 0 10px rgba(0,245,255,0.15);
+  }
+
+  .mg-code-btn.bad {
+    border-color: rgba(255,26,46,0.5);
+    background: rgba(255,26,46,0.1);
+    opacity: 0.4;
+    text-decoration: line-through;
+    pointer-events: none;
+  }
+
+  .decode-hex-small {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 7px;
+    color: var(--red);
+    opacity: 0.5;
+    letter-spacing: 2px;
+    text-align: center;
+    line-height: 1.8;
+    animation: hex-flicker 0.1s steps(1) infinite;
+  }
+
+  @keyframes hex-flicker {
+    0%   { opacity: 0.3; }
+    50%  { opacity: 0.6; }
+    100% { opacity: 0.4; }
+  }
+
+  .mg-percent {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--cyan);
+    text-shadow: 0 0 12px var(--cyan);
+    letter-spacing: 3px;
+  }
+
+  @keyframes decode-fill { 0% { width: 0; } 100% { width: 100%; } }
 </style>
 </head>
 <body>
 
 <div class="phone-shell">
 
+
+  <!-- ===== LOCK SCREEN ===== -->
+  <div id="lock-screen" onclick="unlockPhone()">
+    <div class="lock-bg"></div>
+    <div class="lock-icon">🔒</div>
+    <div class="lock-label">Appuyer pour déverrouiller</div>
+    <div class="lock-sub">MESS // IA — ACCÈS SÉCURISÉ</div>
+    <div class="lock-line"></div>
+  </div>
+
   <!-- ===== BOOT SCREEN ===== -->
-  <div id="boot-screen">
+  <div id="boot-screen" style="display:none;">
     <canvas class="boot-canvas" id="matrixCanvas"></canvas>
     <div class="boot-logo">
-      <div class="boot-logo-text">// SYS //</div>
-      <div class="boot-logo-sub">CERBERUS SECURE LAYER</div>
+      <div class="boot-logo-text">MESS</div>
+      <div class="boot-logo-sub">MOSSEBA SECURE LAYER</div>
     </div>
     <div class="boot-bar-wrap">
       <div class="boot-bar"></div>
@@ -814,8 +1144,9 @@
       COMMUNICATION INTERCEPTÉE — FRAGMENT DÉCHIFFRÉ PARTIEL
     </div>
 
-    <div class="messages" id="messages">
+    <div class="messages locked" id="messages">
 
+      <div class="locked-hint">Données chiffrées — déchiffrer pour lire</div>
       <div class="date-sep">2035.02.18 — SESSION RECONSTRUITE</div>
 
       <div class="msg amor">
@@ -979,18 +1310,44 @@
       <div class="enc-btn" onclick="triggerDecode()">🔐</div>
     </div>
 
+    <!-- MINIGAME OVERLAY -->
     <div class="decode-overlay" id="decodeOverlay">
-      <div class="decode-hex">
-        4D455353 2F2F4941 20555449 4C495341 54455552<br>
-        41434345 53532044 454E4945 20504F55 52204341<br>
-        4E414C20 37202D20 46524147 4D454E54 2053454E<br>
-        53204449 52454354 494F4E20 50524F54 4F434F4C<br>
-        45204D45 53532D4F 4D454741 20494E49 54494154
+
+      <!-- ÉTAPE 1 : séquence de touches -->
+      <div id="step1" class="mg-step">
+        <div class="mg-title">PROTOCOLE D'ACCÈS</div>
+        <div class="mg-sub">Reproduisez la séquence dans l'ordre</div>
+        <div class="mg-seq-display" id="seqDisplay"></div>
+        <div class="mg-pad" id="mgPad">
+          <button class="mg-btn" data-val="A" onclick="padPress('A')">A</button>
+          <button class="mg-btn" data-val="B" onclick="padPress('B')">B</button>
+          <button class="mg-btn" data-val="C" onclick="padPress('C')">C</button>
+          <button class="mg-btn" data-val="D" onclick="padPress('D')">D</button>
+          <button class="mg-btn" data-val="E" onclick="padPress('E')">E</button>
+          <button class="mg-btn" data-val="F" onclick="padPress('F')">F</button>
+        </div>
+        <div class="mg-input-display" id="inputDisplay">_</div>
+        <div class="mg-error" id="step1Error"></div>
       </div>
-      <div class="decode-status">DÉCHIFFREMENT EN COURS...</div>
-      <div class="decode-bar-wrap">
-        <div class="decode-bar" id="decodeBar"></div>
+
+      <!-- ÉTAPE 2 : trouver le bon code parmi des faux -->
+      <div id="step2" class="mg-step" style="display:none;">
+        <div class="mg-title">ISOLATION DU FRAGMENT</div>
+        <div class="mg-sub">Un seul code est valide. Identifiez-le.</div>
+        <div class="mg-codes" id="mgCodes"></div>
+        <div class="mg-error" id="step2Error"></div>
       </div>
+
+      <!-- ÉTAPE 3 : barre de déchiffrement final -->
+      <div id="step3" class="mg-step" style="display:none;">
+        <div class="mg-title">DÉCHIFFREMENT EN COURS</div>
+        <div class="decode-hex-small" id="hexScroll"></div>
+        <div class="decode-bar-wrap" style="width:220px; margin-top:16px;">
+          <div class="decode-bar" id="decodeBar"></div>
+        </div>
+        <div class="mg-percent" id="mgPercent">0%</div>
+      </div>
+
     </div>
 
   </div>
@@ -1058,7 +1415,7 @@ setTimeout(() => {
   boot.style.transition = 'opacity 0.6s';
   boot.style.opacity = '0';
   setTimeout(() => {
-    boot.classList.add('hidden');
+    boot.style.display = 'none';
     const home = document.getElementById('home-screen');
     home.classList.add('visible');
     home.style.opacity = '0';
@@ -1089,10 +1446,7 @@ function openMessages() {
     content.style.opacity = '0';
     content.style.transition = 'opacity 0.3s';
     requestAnimationFrame(() => { content.style.opacity = '1'; });
-    setTimeout(() => {
-      const msgs = document.getElementById('messages');
-      msgs.scrollTop = msgs.scrollHeight;
-    }, 4000);
+    // don't auto-scroll — messages are locked until decrypted
   }, 300);
 }
 
@@ -1113,14 +1467,187 @@ function goHome() {
 }
 
 // ===== DECODE OVERLAY =====
+// ===== MINIGAME =====
+const SECRET_SEQ = ['A','D','B','F','C'];
+let playerInput = [];
+let seqRevealed = false;
+
 function triggerDecode() {
   const overlay = document.getElementById('decodeOverlay');
-  const bar = document.getElementById('decodeBar');
   overlay.classList.add('active');
+  startStep1();
+}
+
+// --- STEP 1 : séquence ---
+function startStep1() {
+  playerInput = [];
+  document.getElementById('inputDisplay').textContent = '_';
+  document.getElementById('step1Error').textContent = '';
+  buildSeqDisplay();
+  playSequenceAnimation();
+}
+
+function buildSeqDisplay() {
+  const el = document.getElementById('seqDisplay');
+  el.innerHTML = '';
+  SECRET_SEQ.forEach((c, i) => {
+    const div = document.createElement('div');
+    div.className = 'mg-seq-item';
+    div.id = 'seq_' + i;
+    div.textContent = '?';
+    el.appendChild(div);
+  });
+}
+
+function playSequenceAnimation() {
+  // Flash each key one by one
+  SECRET_SEQ.forEach((c, i) => {
+    setTimeout(() => {
+      const el = document.getElementById('seq_' + i);
+      el.textContent = c;
+      el.classList.add('flash');
+      playClickSound();
+      setTimeout(() => {
+        el.classList.remove('flash');
+        el.textContent = '?';
+        if (i === SECRET_SEQ.length - 1) {
+          seqRevealed = true;
+        }
+      }, 400);
+    }, i * 500 + 300);
+  });
+}
+
+function padPress(val) {
+  if (!seqRevealed) return;
+  playClickSound();
+
+  // Flash button
+  const btn = document.querySelector('.mg-btn[data-val="' + val + '"]');
+  btn.classList.add('pressed');
+  setTimeout(() => btn.classList.remove('pressed'), 150);
+
+  playerInput.push(val);
+  const idx = playerInput.length - 1;
+
+  document.getElementById('inputDisplay').textContent = playerInput.join(' ');
+
+  // Check current input
+  if (playerInput[idx] !== SECRET_SEQ[idx]) {
+    // Wrong
+    btn.classList.add('wrong');
+    setTimeout(() => btn.classList.remove('wrong'), 400);
+    document.getElementById('step1Error').textContent = '✗ SÉQUENCE INCORRECTE — RÉINITIALISATION';
+    playerInput = [];
+    setTimeout(() => {
+      document.getElementById('step1Error').textContent = '';
+      document.getElementById('inputDisplay').textContent = '_';
+      playSequenceAnimation();
+    }, 1200);
+    return;
+  }
+
+  btn.classList.add('correct');
+  setTimeout(() => btn.classList.remove('correct'), 300);
+
+  if (playerInput.length === SECRET_SEQ.length) {
+    // Step 1 complete
+    document.getElementById('step1Error').textContent = '';
+    setTimeout(() => goStep2(), 600);
+  }
+}
+
+// --- STEP 2 : trouver le bon code ---
+const REAL_CODE = 'M3SS-ΩB4-C4N4L7';
+const FAKE_CODES = [
+  'X9RR-4F1A-B7K22',
+  'C3RB-ERU5-00X11',
+  'N0D3-09AF-T3L4V',
+  'PR0T-0MSS-GH778',
+  'D4T4-FR4G-J0HN5',
+  'S3UL-OMG4-R3W1N',
+];
+
+function goStep2() {
+  document.getElementById('step1').style.display = 'none';
+  document.getElementById('step2').style.display = 'flex';
+
+  // Shuffle codes with real one inserted randomly
+  const allCodes = [...FAKE_CODES];
+  const realPos = Math.floor(Math.random() * (allCodes.length + 1));
+  allCodes.splice(realPos, 0, REAL_CODE);
+
+  const container = document.getElementById('mgCodes');
+  container.innerHTML = '';
+  allCodes.forEach(code => {
+    const btn = document.createElement('button');
+    btn.className = 'mg-code-btn';
+    btn.textContent = code;
+    btn.onclick = () => codePress(btn, code);
+    container.appendChild(btn);
+  });
+}
+
+function codePress(btn, code) {
+  playClickSound();
+  if (code === REAL_CODE) {
+    btn.classList.add('good');
+    setTimeout(() => goStep3(), 700);
+  } else {
+    btn.classList.add('bad');
+    document.getElementById('step2Error').textContent = '✗ CODE INVALIDE';
+    setTimeout(() => { document.getElementById('step2Error').textContent = ''; }, 1500);
+  }
+}
+
+// --- STEP 3 : déchiffrement final ---
+const hexLines = [
+  '4D455353 2F2F4941 43414E41 4C2D3720 53454355',
+  '52455F4C 4159455220 4D4F5353 45424120 50524F54',
+  '4F434F4C 455F4D45 53532041 4343455353 47524E54',
+  '46524147 4D454E54 20444543 52595054 20494E49',
+];
+
+function goStep3() {
+  document.getElementById('step2').style.display = 'none';
+  document.getElementById('step3').style.display = 'flex';
+
+  const bar = document.getElementById('decodeBar');
   bar.style.animation = 'none';
   bar.offsetHeight;
-  bar.style.animation = 'decode-fill 3s ease forwards';
-  setTimeout(() => { overlay.classList.remove('active'); }, 3500);
+  bar.style.animation = 'decode-fill 4s ease forwards';
+
+  // Animated hex
+  let lineIdx = 0;
+  const hexEl = document.getElementById('hexScroll');
+  const hexInterval = setInterval(() => {
+    hexEl.textContent = hexLines[lineIdx % hexLines.length];
+    lineIdx++;
+  }, 200);
+
+  // Percent counter
+  let pct = 0;
+  const pctEl = document.getElementById('mgPercent');
+  const pctInterval = setInterval(() => {
+    pct += Math.floor(Math.random() * 4) + 1;
+    if (pct >= 100) { pct = 100; clearInterval(pctInterval); }
+    pctEl.textContent = pct + '%';
+  }, 100);
+
+  setTimeout(() => {
+    clearInterval(hexInterval);
+    const overlay = document.getElementById('decodeOverlay');
+    overlay.classList.remove('active');
+    // Reset steps for next time
+    document.getElementById('step1').style.display = 'flex';
+    document.getElementById('step2').style.display = 'none';
+    document.getElementById('step3').style.display = 'none';
+
+    const messages = document.getElementById('messages');
+    messages.classList.remove('locked');
+    messages.classList.add('revealed');
+    setTimeout(() => { messages.scrollTop = messages.scrollHeight; }, 500);
+  }, 4200);
 }
 
 // ===== AUDIO ENGINE =====
@@ -1210,16 +1737,29 @@ function playBackSound() {
   noise(0, 0.03, 0.02);
 }
 
-// ===== INIT AU PREMIER CLIC =====
-let bootSoundPlayed = false;
-document.addEventListener('click', function initAudio() {
-  getAudio(); // unlock
-  if (!bootSoundPlayed) {
-    bootSoundPlayed = true;
-    playBootSound();
-  }
-  document.removeEventListener('click', initAudio);
-}, { once: true });
+// ===== UNLOCK =====
+function unlockPhone() {
+  getAudio();
+  const lock = document.getElementById('lock-screen');
+  const boot = document.getElementById('boot-screen');
+
+  // Animate lock icon
+  lock.querySelector('.lock-icon').textContent = '🔓';
+  lock.querySelector('.lock-label').textContent = 'Déverrouillage...';
+
+  setTimeout(() => {
+    lock.style.transition = 'opacity 0.5s';
+    lock.style.opacity = '0';
+    setTimeout(() => {
+      lock.classList.add('hidden');
+      boot.style.display = 'flex';
+      boot.style.opacity = '0';
+      boot.style.transition = 'opacity 0.4s';
+      requestAnimationFrame(() => { boot.style.opacity = '1'; });
+      playBootSound();
+    }, 500);
+  }, 400);
+}
 </script>
 
 </body>
